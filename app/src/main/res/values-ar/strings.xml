@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App -->
+    <string name="app_name">Nexus</string>
+    <string name="app_tagline">دردشة ذكية متعددة المزوّدين</string>
+
+    <!-- Navigation -->
+    <string name="nav_chat">الدردشة</string>
+    <string name="nav_kanban">كانبان</string>
+    <string name="nav_providers">المزوّدون</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Common actions -->
+    <string name="action_ok">موافق</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_edit">تعديل</string>
+    <string name="action_close">إغلاق</string>
+    <string name="action_back">رجوع</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_send">إرسال</string>
+    <string name="action_stop">إيقاف</string>
+    <string name="action_copy">نسخ</string>
+    <string name="action_copied">تم النسخ</string>
+    <string name="action_attach">إرفاق</string>
+    <string name="action_add">إضافة</string>
+    <string name="action_duplicate">مكرر</string>
+    <string name="loading">جارٍ التحميل</string>
+
+    <!-- Chat -->
+    <string name="chat_title">الدردشة</string>
+    <string name="chat_empty_title">ابدأ محادثة</string>
+    <string name="chat_empty_body">اختر مزوّدًا ونموذجًا ثم قل مرحبًا.</string>
+    <string name="chat_input_hint">اكتب رسالة إلى النموذج</string>
+    <string name="chat_new">محادثة جديدة</string>
+    <string name="chat_reasoning">الاستدلال</string>
+    <string name="chat_sources">المصادر</string>
+    <string name="chat_switch_model">تغيير المزوّد أو النموذج</string>
+    <string name="chat_mode_label">الوضع</string>
+    <string name="chat_export">تصدير المحادثة</string>
+
+    <!-- Errors -->
+    <string name="error_generic">حدث خطأ ما.</string>
+    <string name="error_unauthorized">غير مصرح. تحقق من مفتاح API.</string>
+    <string name="error_rate_limited">تم تجاوز الحد. حاول بعد قليل.</string>
+    <string name="error_network">خطأ في الشبكة. تحقق من اتصالك.</string>
+    <string name="error_timeout">انتهت مهلة الطلب.</string>
+    <string name="error_no_provider">أضف مزوّدًا للبدء.</string>
+    <string name="error_api_key_missing">هذا المزوّد بدون مفتاح API.</string>
+
+    <!-- Providers -->
+    <string name="providers_title">المزوّدون</string>
+    <string name="providers_empty">لا يوجد مزوّدون بعد. أضف واحدًا للبدء.</string>
+    <string name="providers_add">إضافة مزوّد</string>
+    <string name="providers_edit_title">تعديل المزوّد</string>
+    <string name="providers_name">الاسم</string>
+    <string name="providers_type">النوع</string>
+    <string name="providers_base_url">عنوان URL الأساسي</string>
+    <string name="providers_api_key">مفتاح API</string>
+    <string name="providers_models">النماذج</string>
+    <string name="providers_fetch_models">جلب النماذج</string>
+    <string name="providers_test">اختبار الاتصال</string>
+    <string name="providers_test_success">الاتصال ناجح</string>
+    <string name="providers_test_failed">فشل الاتصال</string>
+    <string name="providers_delete_confirm">حذف المزوّد</string>
+    <string name="providers_delete_confirm_body">سيؤدي هذا إلى إزالة المزوّد ومفتاحه المخزّن من هذا الجهاز.</string>
+    <string name="providers_enabled">مُمكَّن</string>
+    <string name="providers_export">تصدير المزوّدين</string>
+    <string name="providers_import">استيراد المزوّدين</string>
+    <string name="providers_temperature">درجة الحرارة</string>
+    <string name="providers_max_tokens">الحد الأقصى للرموز</string>
+    <string name="provider_type_anthropic">Anthropic</string>
+    <string name="provider_type_openai">OpenAI</string>
+    <string name="provider_type_gemini">Google Gemini</string>
+    <string name="provider_type_compat">متوافق مع OpenAI</string>
+
+    <!-- Kanban -->
+    <string name="kanban_title">كانبان</string>
+    <string name="kanban_todo">للقيام</string>
+    <string name="kanban_in_progress">قيد التنفيذ</string>
+    <string name="kanban_review">المراجعة</string>
+    <string name="kanban_done">منتهي</string>
+    <string name="kanban_add_card">إضافة بطاقة</string>
+    <string name="kanban_card_title">العنوان</string>
+    <string name="kanban_card_notes">ملاحظات</string>
+    <string name="kanban_empty">لا توجد بطاقات بعد. اضغط مطوّلًا على البطاقة لسحبها.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_appearance">المظهر</string>
+    <string name="settings_theme">السمة</string>
+    <string name="settings_theme_light">فاتح</string>
+    <string name="settings_theme_dark">داكن</string>
+    <string name="settings_theme_system">النظام</string>
+    <string name="settings_dynamic_color">ألوان ديناميكية</string>
+    <string name="settings_privacy">الخصوصية</string>
+    <string name="settings_privacy_body">مفاتيح API مشفّرة باستخدام Android Keystore ولا تغادر جهازك إلا إلى المزوّد الذي اخترته. لا تحليلات، لا تتبع، لا مرور عبر خوادمنا.</string>
+    <string name="settings_about">حول</string>
+    <string name="settings_version">الإصدار</string>
+
+    <!-- Modes -->
+    <string name="mode_chat">الدردشة</string>
+    <string name="mode_work">العمل</string>
+    <string name="mode_code">الكود</string>
+    <string name="mode_research">البحث</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_mode_switch">تبديل الوضع</string>
+    <string name="cd_send">إرسال الرسالة</string>
+    <string name="cd_stop">إيقاف التوليد</string>
+    <string name="cd_attach">إرفاق ملف</string>
+    <string name="cd_provider_settings">فتح إعدادات المزوّد</string>
+    <string name="cd_add_provider">إضافة مزوّد</string>
+    <string name="cd_add_card">إضافة بطاقة</string>
+
+</resources>
