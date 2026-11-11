@@ -88,6 +88,16 @@ class ConversationRepository(
         conversationDao.touch(id, System.currentTimeMillis(), newTitle)
     }
 
+    suspend fun setPinned(id: String, pinned: Boolean) {
+        val existing = conversationDao.observeById(id).first() ?: return
+        conversationDao.upsert(existing.copy(pinned = pinned))
+    }
+
+    suspend fun setArchived(id: String, archived: Boolean) {
+        val existing = conversationDao.observeById(id).first() ?: return
+        conversationDao.upsert(existing.copy(archived = archived))
+    }
+
     suspend fun deleteConversation(id: String) {
         messageDao.deleteForConversation(id)
         conversationDao.deleteById(id)

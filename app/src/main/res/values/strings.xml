@@ -5,18 +5,36 @@
     <string name="app_name">Nexus</string>
     <string name="app_tagline">Multi-provider AI chat</string>
 
-    <!-- Navigation -->
+    <!-- Navigation (drawer) -->
     <string name="nav_chat">Chat</string>
     <string name="nav_kanban">Kanban</string>
     <string name="nav_providers">Providers</string>
     <string name="nav_settings">Settings</string>
 
+    <!-- Drawer -->
+    <string name="drawer_open">Open navigation drawer</string>
+    <string name="drawer_close">Close navigation drawer</string>
+    <string name="drawer_new_chat">New chat</string>
+    <string name="drawer_modes_header">Modes</string>
+    <string name="drawer_add_mode">Add mode</string>
+    <string name="drawer_recent_header">Recent</string>
+    <string name="drawer_search_chats_hint">Search conversations</string>
+    <string name="drawer_pin">Pin</string>
+    <string name="drawer_unpin">Unpin</string>
+    <string name="drawer_archive">Archive</string>
+    <string name="drawer_rename">Rename</string>
+    <string name="drawer_delete_chat">Delete</string>
+    <string name="drawer_active_provider_label">Active provider</string>
+    <string name="drawer_no_conversations">No conversations yet</string>
+
     <!-- Common actions -->
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
+    <string name="action_apply">Apply</string>
     <string name="action_delete">Delete</string>
     <string name="action_edit">Edit</string>
+    <string name="action_rename">Rename</string>
     <string name="action_close">Close</string>
     <string name="action_back">Back</string>
     <string name="action_retry">Retry</string>
@@ -40,6 +58,11 @@
     <string name="chat_switch_model">Switch provider or model</string>
     <string name="chat_mode_label">Mode</string>
     <string name="chat_export">Export conversation</string>
+    <string name="chat_topbar_menu">More options</string>
+    <string name="chat_menu_rename">Rename conversation</string>
+    <string name="chat_menu_archive">Archive conversation</string>
+    <string name="chat_menu_delete">Delete conversation</string>
+    <string name="chat_menu_export">Export conversation</string>
 
     <!-- Errors -->
     <string name="error_generic">Something went wrong.</string>
@@ -59,6 +82,7 @@
     <string name="providers_type">Type</string>
     <string name="providers_base_url">Base URL</string>
     <string name="providers_api_key">API key</string>
+    <string name="providers_api_key_optional">API key (optional)</string>
     <string name="providers_models">Models</string>
     <string name="providers_fetch_models">Fetch models</string>
     <string name="providers_test">Test connection</string>
@@ -71,10 +95,24 @@
     <string name="providers_import">Import providers</string>
     <string name="providers_temperature">Temperature</string>
     <string name="providers_max_tokens">Max tokens</string>
+    <string name="providers_quick_add">Quick add</string>
+    <string name="providers_quick_add_subtitle">One tap to prefill. Paste your key to finish.</string>
+    <string name="providers_or_custom">Or create a custom provider</string>
     <string name="provider_type_anthropic">Anthropic</string>
     <string name="provider_type_openai">OpenAI</string>
     <string name="provider_type_gemini">Google Gemini</string>
     <string name="provider_type_compat">OpenAI-compatible</string>
+
+    <!-- NVIDIA NIM -->
+    <string name="nim_cloud_label">NVIDIA NIM — Cloud</string>
+    <string name="nim_selfhosted_label">NVIDIA NIM — Self-hosted</string>
+    <string name="nim_key_hint">Starts with nvapi-</string>
+    <string name="nim_local_key_note">Leave API key empty for local containers.</string>
+    <string name="nim_error_unauthorized">Invalid NVIDIA key</string>
+    <string name="nim_error_rate_limited">Rate limit reached (free tier credits may be exhausted)</string>
+    <string name="nim_error_model_missing">Model not available on this endpoint</string>
+    <string name="nim_model_search_hint">Search models</string>
+    <string name="nim_vendor_all">All</string>
 
     <!-- Kanban -->
     <string name="kanban_title">Kanban</string>
@@ -95,6 +133,9 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_dynamic_color">Dynamic color</string>
+    <string name="settings_dynamic_color_desc">Match the wallpaper on Android 12+</string>
+    <string name="settings_seed_color">Seed color</string>
+    <string name="settings_seed_color_desc">Used when dynamic color is off</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_privacy_body">Your API keys are encrypted with the Android Keystore and never leave this device except to the provider you selected. No analytics, no tracking, no servers of ours in the middle.</string>
     <string name="settings_about">About</string>
@@ -105,6 +146,7 @@
     <string name="mode_work">Work</string>
     <string name="mode_code">Code</string>
     <string name="mode_research">Research</string>
+    <string name="mode_picker_title">Switch mode</string>
 
     <!-- Content descriptions -->
     <string name="cd_mode_switch">Switch mode</string>
@@ -114,5 +156,6 @@
     <string name="cd_provider_settings">Open provider settings</string>
     <string name="cd_add_provider">Add a provider</string>
     <string name="cd_add_card">Add a card</string>
+    <string name="cd_open_drawer">Open navigation</string>
 
 </resources>

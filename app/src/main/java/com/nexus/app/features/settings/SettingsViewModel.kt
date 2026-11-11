@@ -2,6 +2,7 @@ package com.nexus.app.features.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nexus.app.data.datastore.DEFAULT_SEED_COLOR_ARGB
 import com.nexus.app.data.datastore.Density
 import com.nexus.app.data.datastore.SettingsRepository
 import com.nexus.app.data.datastore.ThemeMode
@@ -18,7 +19,14 @@ class SettingsViewModel(
         settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
 
     val dynamicColor: StateFlow<Boolean> =
-        settings.dynamicColor.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        settings.dynamicColor.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val seedColorArgb: StateFlow<Long> =
+        settings.seedColorArgb.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            DEFAULT_SEED_COLOR_ARGB
+        )
 
     val density: StateFlow<Density> =
         settings.density.stateIn(viewModelScope, SharingStarted.Eagerly, Density.COMFORTABLE)
@@ -29,6 +37,10 @@ class SettingsViewModel(
 
     fun setDynamicColor(enabled: Boolean) {
         viewModelScope.launch { settings.setDynamicColor(enabled) }
+    }
+
+    fun setSeedColor(argb: Long) {
+        viewModelScope.launch { settings.setSeedColor(argb) }
     }
 
     fun setDensity(density: Density) {

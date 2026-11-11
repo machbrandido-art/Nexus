@@ -18,7 +18,9 @@ data class ProviderEntity(
     val temperature: Float? = null,
     @ColumnInfo(name = "max_tokens") val maxTokens: Int? = null,
     @ColumnInfo(name = "reasoning_effort") val reasoningEffort: String? = null,
-    @ColumnInfo(name = "sort_order") val sortOrder: Int = 0
+    @ColumnInfo(name = "sort_order") val sortOrder: Int = 0,
+    /** Null for hand-created providers, the preset id (e.g. "nim") for one-tap adds. */
+    @ColumnInfo(name = "preset_id") val presetId: String? = null
 )
 
 @Entity(tableName = "conversations")

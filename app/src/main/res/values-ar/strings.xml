@@ -5,18 +5,36 @@
     <string name="app_name">Nexus</string>
     <string name="app_tagline">دردشة ذكية متعددة المزوّدين</string>
 
-    <!-- Navigation -->
+    <!-- Navigation (drawer) -->
     <string name="nav_chat">الدردشة</string>
     <string name="nav_kanban">كانبان</string>
     <string name="nav_providers">المزوّدون</string>
     <string name="nav_settings">الإعدادات</string>
 
+    <!-- Drawer -->
+    <string name="drawer_open">فتح قائمة التنقل</string>
+    <string name="drawer_close">إغلاق قائمة التنقل</string>
+    <string name="drawer_new_chat">محادثة جديدة</string>
+    <string name="drawer_modes_header">الأوضاع</string>
+    <string name="drawer_add_mode">إضافة وضع</string>
+    <string name="drawer_recent_header">الأحدث</string>
+    <string name="drawer_search_chats_hint">بحث في المحادثات</string>
+    <string name="drawer_pin">تثبيت</string>
+    <string name="drawer_unpin">إلغاء التثبيت</string>
+    <string name="drawer_archive">أرشفة</string>
+    <string name="drawer_rename">إعادة تسمية</string>
+    <string name="drawer_delete_chat">حذف</string>
+    <string name="drawer_active_provider_label">المزوّد النشط</string>
+    <string name="drawer_no_conversations">لا توجد محادثات بعد</string>
+
     <!-- Common actions -->
     <string name="action_ok">موافق</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_save">حفظ</string>
+    <string name="action_apply">تطبيق</string>
     <string name="action_delete">حذف</string>
     <string name="action_edit">تعديل</string>
+    <string name="action_rename">إعادة تسمية</string>
     <string name="action_close">إغلاق</string>
     <string name="action_back">رجوع</string>
     <string name="action_retry">إعادة المحاولة</string>
@@ -40,6 +58,11 @@
     <string name="chat_switch_model">تغيير المزوّد أو النموذج</string>
     <string name="chat_mode_label">الوضع</string>
     <string name="chat_export">تصدير المحادثة</string>
+    <string name="chat_topbar_menu">المزيد من الخيارات</string>
+    <string name="chat_menu_rename">إعادة تسمية المحادثة</string>
+    <string name="chat_menu_archive">أرشفة المحادثة</string>
+    <string name="chat_menu_delete">حذف المحادثة</string>
+    <string name="chat_menu_export">تصدير المحادثة</string>
 
     <!-- Errors -->
     <string name="error_generic">حدث خطأ ما.</string>
@@ -59,6 +82,7 @@
     <string name="providers_type">النوع</string>
     <string name="providers_base_url">عنوان URL الأساسي</string>
     <string name="providers_api_key">مفتاح API</string>
+    <string name="providers_api_key_optional">مفتاح API (اختياري)</string>
     <string name="providers_models">النماذج</string>
     <string name="providers_fetch_models">جلب النماذج</string>
     <string name="providers_test">اختبار الاتصال</string>
@@ -71,10 +95,24 @@
     <string name="providers_import">استيراد المزوّدين</string>
     <string name="providers_temperature">درجة الحرارة</string>
     <string name="providers_max_tokens">الحد الأقصى للرموز</string>
+    <string name="providers_quick_add">إضافة سريعة</string>
+    <string name="providers_quick_add_subtitle">نقرة واحدة للتعبئة المسبقة. الصق مفتاحك لإكمال الإعداد.</string>
+    <string name="providers_or_custom">أو أنشئ مزوّدًا مخصصًا</string>
     <string name="provider_type_anthropic">Anthropic</string>
     <string name="provider_type_openai">OpenAI</string>
     <string name="provider_type_gemini">Google Gemini</string>
     <string name="provider_type_compat">متوافق مع OpenAI</string>
+
+    <!-- NVIDIA NIM -->
+    <string name="nim_cloud_label">NVIDIA NIM — سحابي</string>
+    <string name="nim_selfhosted_label">NVIDIA NIM — مستضاف ذاتيًا</string>
+    <string name="nim_key_hint">يبدأ بـ nvapi-</string>
+    <string name="nim_local_key_note">اترك مفتاح API فارغًا للحاويات المحلية.</string>
+    <string name="nim_error_unauthorized">مفتاح NVIDIA غير صالح</string>
+    <string name="nim_error_rate_limited">تم الوصول لحد المعدل (قد تكون أرصدة الطبقة المجانية مستنفدة)</string>
+    <string name="nim_error_model_missing">النموذج غير متوفر على هذا المنفذ</string>
+    <string name="nim_model_search_hint">بحث في النماذج</string>
+    <string name="nim_vendor_all">الكل</string>
 
     <!-- Kanban -->
     <string name="kanban_title">كانبان</string>
@@ -95,6 +133,9 @@
     <string name="settings_theme_dark">داكن</string>
     <string name="settings_theme_system">النظام</string>
     <string name="settings_dynamic_color">ألوان ديناميكية</string>
+    <string name="settings_dynamic_color_desc">مطابقة خلفية الشاشة على Android 12+</string>
+    <string name="settings_seed_color">لون البذرة</string>
+    <string name="settings_seed_color_desc">يُستخدم عند إيقاف الألوان الديناميكية</string>
     <string name="settings_privacy">الخصوصية</string>
     <string name="settings_privacy_body">مفاتيح API مشفّرة باستخدام Android Keystore ولا تغادر جهازك إلا إلى المزوّد الذي اخترته. لا تحليلات، لا تتبع، لا مرور عبر خوادمنا.</string>
     <string name="settings_about">حول</string>
@@ -105,6 +146,7 @@
     <string name="mode_work">العمل</string>
     <string name="mode_code">الكود</string>
     <string name="mode_research">البحث</string>
+    <string name="mode_picker_title">تبديل الوضع</string>
 
     <!-- Content descriptions -->
     <string name="cd_mode_switch">تبديل الوضع</string>
@@ -114,5 +156,6 @@
     <string name="cd_provider_settings">فتح إعدادات المزوّد</string>
     <string name="cd_add_provider">إضافة مزوّد</string>
     <string name="cd_add_card">إضافة بطاقة</string>
+    <string name="cd_open_drawer">فتح التنقل</string>
 
 </resources>

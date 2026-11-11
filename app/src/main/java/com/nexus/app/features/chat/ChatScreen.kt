@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,22 +20,31 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,11 +66,12 @@ import com.nexus.app.modes.Mode
 import com.nexus.app.modes.PresetModes
 import com.nexus.app.providers.ChatMessage
 import com.nexus.app.providers.ProviderConfig
+import com.nexus.app.providers.compat.NimPreset
 import com.nexus.app.ui.components.ErrorBanner
 import com.nexus.app.ui.components.MessageBubble
-import com.nexus.app.ui.components.ModeChip
 import com.nexus.app.ui.components.SimpleMarkdown
 import com.nexus.app.ui.components.StreamingIndicator
+import com.nexus.app.ui.navigation.LocalDrawerController
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,10 +81,15 @@ fun ChatScreen(
     viewModel: ChatViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showModeSheet by remember { mutableStateOf(false) }
-    var showModelSheet by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    val drawerController = LocalDrawerController.current
 
+    var showModeMenu by remember { mutableStateOf(false) }
+    var showModelSheet by remember { mutableStateOf(false) }
+    var showTopMenu by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
     val modes: List<Mode> = remember { PresetModes }
     val currentMode = modes.firstOrNull { it.id == state.modeId } ?: modes.first()
 
@@ -84,53 +101,108 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ModeChip(
-                            icon = currentMode.icon,
-                            label = stringResource(currentMode.nameResId),
-                            onClick = { showModeSheet = true }
+                navigationIcon = {
+                    IconButton(onClick = { drawerController.openDrawer() }) {
+                        Icon(
+                            Icons.Filled.Menu,
+                            contentDescription = stringResource(R.string.cd_open_drawer)
                         )
-                        Spacer(Modifier.width(8.dp))
-                        Surface(
-                            onClick = { showModelSheet = true },
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                    }
+                },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = state.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Box {
+                            AssistChip(
+                                onClick = { showModeMenu = true },
+                                label = {
+                                    Text(
+                                        text = stringResource(currentMode.nameResId),
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        currentMode.icon,
+                                        contentDescription = stringResource(R.string.cd_mode_switch),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                            DropdownMenu(
+                                expanded = showModeMenu,
+                                onDismissRequest = { showModeMenu = false }
                             ) {
-                                Icon(
-                                    Icons.Filled.Cloud,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = state.selectedModel ?: "Pick a model",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Icon(
-                                    Icons.Filled.ExpandMore,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                modes.forEach { mode ->
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(mode.nameResId)) },
+                                        leadingIcon = {
+                                            Icon(mode.icon, contentDescription = null)
+                                        },
+                                        trailingIcon = if (mode.id == currentMode.id) {
+                                            {
+                                                Icon(
+                                                    Icons.Filled.Check,
+                                                    contentDescription = null
+                                                )
+                                            }
+                                        } else null,
+                                        onClick = {
+                                            viewModel.switchMode(mode.id)
+                                            showModeMenu = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = viewModel::newChat) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.chat_new))
+                    if (state.conversationId != null) {
+                        IconButton(onClick = { showTopMenu = true }) {
+                            Icon(
+                                Icons.Filled.MoreVert,
+                                contentDescription = stringResource(R.string.chat_topbar_menu)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showTopMenu,
+                            onDismissRequest = { showTopMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.chat_menu_rename)) },
+                                leadingIcon = {
+                                    Icon(Icons.Filled.Edit, contentDescription = null)
+                                },
+                                onClick = {
+                                    showRenameDialog = true
+                                    showTopMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.chat_menu_delete)) },
+                                leadingIcon = {
+                                    Icon(Icons.Filled.Delete, contentDescription = null)
+                                },
+                                onClick = {
+                                    showDeleteDialog = true
+                                    showTopMenu = false
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -200,23 +272,13 @@ fun ChatScreen(
             Composer(
                 input = state.input,
                 isStreaming = state.isStreaming,
+                currentModel = state.selectedModel,
                 onInputChange = viewModel::updateInput,
                 onSend = viewModel::send,
-                onStop = viewModel::cancelStreaming
+                onStop = viewModel::cancelStreaming,
+                onOpenModelPicker = { showModelSheet = true }
             )
         }
-    }
-
-    if (showModeSheet) {
-        ModeSheet(
-            modes = modes,
-            selectedId = state.modeId,
-            onSelect = {
-                viewModel.switchMode(it.id)
-                showModeSheet = false
-            },
-            onDismiss = { showModeSheet = false }
-        )
     }
 
     if (showModelSheet) {
@@ -229,6 +291,54 @@ fun ChatScreen(
                 showModelSheet = false
             },
             onDismiss = { showModelSheet = false }
+        )
+    }
+
+    if (showRenameDialog) {
+        val convId = state.conversationId
+        var newTitle by remember(convId) { mutableStateOf(state.title) }
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(R.string.chat_menu_rename)) },
+            text = {
+                OutlinedTextField(
+                    value = newTitle,
+                    onValueChange = { newTitle = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.providers_name)) }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (convId != null) viewModel.renameConversation(convId, newTitle)
+                    showRenameDialog = false
+                }) { Text(stringResource(R.string.action_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        val convId = state.conversationId
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.chat_menu_delete)) },
+            text = { Text(stringResource(R.string.providers_delete_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (convId != null) viewModel.deleteConversation(convId)
+                    showDeleteDialog = false
+                }) { Text(stringResource(R.string.action_delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
         )
     }
 }
@@ -271,37 +381,73 @@ private fun EmptyProvidersPrompt(onOpenProviders: () -> Unit) {
 private fun Composer(
     input: String,
     isStreaming: Boolean,
+    currentModel: String?,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    onOpenModelPicker: () -> Unit
 ) {
     Surface(tonalElevation = 2.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            OutlinedTextField(
-                value = input,
-                onValueChange = onInputChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text(stringResource(R.string.chat_input_hint)) },
-                maxLines = 6,
-                shape = RoundedCornerShape(20.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            FilledIconButton(
-                onClick = { if (isStreaming) onStop() else onSend() },
-                modifier = Modifier.size(48.dp)
+        Column {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isStreaming) {
-                    Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.action_stop))
-                } else {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = stringResource(R.string.action_send)
-                    )
+                AssistChip(
+                    onClick = onOpenModelPicker,
+                    label = {
+                        Text(
+                            text = currentModel ?: stringResource(R.string.chat_switch_model),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Cloud,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Filled.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = onInputChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(stringResource(R.string.chat_input_hint)) },
+                    maxLines = 6,
+                    shape = RoundedCornerShape(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                FilledIconButton(
+                    onClick = { if (isStreaming) onStop() else onSend() },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    if (isStreaming) {
+                        Icon(
+                            Icons.Filled.Stop,
+                            contentDescription = stringResource(R.string.action_stop)
+                        )
+                    } else {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = stringResource(R.string.action_send)
+                        )
+                    }
                 }
             }
         }
@@ -327,7 +473,10 @@ private fun ReasoningBlock(text: String) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { expanded = !expanded }, modifier = Modifier.size(24.dp)) {
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(24.dp)
+                ) {
                     Icon(
                         Icons.Filled.ExpandMore,
                         contentDescription = null,
@@ -348,41 +497,6 @@ private fun ReasoningBlock(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ModeSheet(
-    modes: List<Mode>,
-    selectedId: String,
-    onSelect: (Mode) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.padding(bottom = 16.dp)) {
-            Text(
-                text = stringResource(R.string.chat_mode_label),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            )
-            modes.forEach { mode ->
-                Surface(
-                    onClick = { onSelect(mode) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ListItem(
-                        headlineContent = { Text(stringResource(mode.nameResId)) },
-                        supportingContent = { Text(mode.systemPrompt.take(70) + "…") },
-                        leadingContent = { Icon(mode.icon, contentDescription = null) },
-                        trailingContent = if (mode.id == selectedId) {
-                            { Text("✓", style = MaterialTheme.typography.titleLarge) }
-                        } else null
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun ModelSheet(
     providers: List<ProviderConfig>,
     selectedProviderId: String?,
@@ -390,53 +504,122 @@ private fun ModelSheet(
     onSelect: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var search by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight(0.85f)
+                .padding(bottom = 16.dp)
+        ) {
             Text(
                 text = stringResource(R.string.chat_switch_model),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            providers.forEach { provider ->
-                Text(
-                    text = provider.name,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-                if (provider.models.isEmpty()) {
-                    Text(
-                        text = "(no models configured)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    )
-                }
-                provider.models.forEach { model ->
-                    val isSelected = provider.id == selectedProviderId && model == selectedModel
-                    Surface(
-                        onClick = { onSelect(provider.id, model) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = model,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f)
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                placeholder = { Text(stringResource(R.string.nim_model_search_hint)) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(24.dp)
+            )
+
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                providers.forEach { provider ->
+                    val filtered = provider.models.filter {
+                        search.isBlank() || it.contains(search, ignoreCase = true)
+                    }
+                    if (filtered.isEmpty()) return@forEach
+
+                    item(key = "hdr-${provider.id}") {
+                        Text(
+                            text = provider.name,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(
+                                start = 20.dp,
+                                end = 20.dp,
+                                top = 12.dp,
+                                bottom = 4.dp
                             )
-                            if (isSelected) {
-                                Text("✓", style = MaterialTheme.typography.titleLarge)
+                        )
+                    }
+
+                    if (provider.presetId == NimPreset.ID) {
+                        val grouped = NimPreset.groupModelsByVendor(filtered)
+                        grouped.forEach { (vendor, models) ->
+                            item(key = "vendor-${provider.id}-$vendor") {
+                                Text(
+                                    text = vendor,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(
+                                        start = 32.dp,
+                                        end = 20.dp,
+                                        top = 6.dp,
+                                        bottom = 2.dp
+                                    )
+                                )
                             }
+                            items(models, key = { "m-${provider.id}-$it" }) { model ->
+                                ModelRow(
+                                    model = model,
+                                    isSelected = provider.id == selectedProviderId && model == selectedModel,
+                                    onClick = { onSelect(provider.id, model) }
+                                )
+                            }
+                        }
+                    } else {
+                        items(filtered, key = { "m-${provider.id}-$it" }) { model ->
+                            ModelRow(
+                                model = model,
+                                isSelected = provider.id == selectedProviderId && model == selectedModel,
+                                onClick = { onSelect(provider.id, model) }
+                            )
                         }
                     }
                 }
-                Spacer(Modifier.height(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelRow(
+    model: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = model,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            if (isSelected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

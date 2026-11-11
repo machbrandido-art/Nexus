@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
@@ -22,7 +23,8 @@ data class ProviderExportDto(
     val baseUrl: String,
     val models: List<String> = emptyList(),
     val enabled: Boolean = true,
-    val apiKey: String = ""
+    val apiKey: String = "",
+    val presetId: String? = null
 )
 
 class ProviderRepository(
@@ -66,17 +68,15 @@ class ProviderRepository(
                 baseUrl = e.baseUrl,
                 models = e.modelsCsv.split(",").filter { it.isNotBlank() },
                 enabled = e.enabled,
-                apiKey = if (includeKeys) crypto.decrypt(e.apiKeyEncrypted) else ""
+                apiKey = if (includeKeys) crypto.decrypt(e.apiKeyEncrypted) else "",
+                presetId = e.presetId
             )
         }
-        return json.encodeToString(kotlinx.serialization.builtins.ListSerializer(ProviderExportDto.serializer()), dtos)
+        return json.encodeToString(ListSerializer(ProviderExportDto.serializer()), dtos)
     }
 
     suspend fun importJson(raw: String) {
-        val dtos = json.decodeFromString(
-            kotlinx.serialization.builtins.ListSerializer(ProviderExportDto.serializer()),
-            raw
-        )
+        val dtos = json.decodeFromString(ListSerializer(ProviderExportDto.serializer()), raw)
         dtos.forEach { dto ->
             val type = ProviderType.entries.find { it.name == dto.type } ?: ProviderType.COMPAT
             val config = ProviderConfig(
@@ -86,7 +86,8 @@ class ProviderRepository(
                 baseUrl = dto.baseUrl,
                 apiKey = dto.apiKey,
                 models = dto.models,
-                enabled = dto.enabled
+                enabled = dto.enabled,
+                presetId = dto.presetId
             )
             dao.upsert(config.toEntity())
         }
@@ -102,7 +103,8 @@ class ProviderRepository(
         enabled = enabled,
         temperature = temperature,
         maxTokens = maxTokens,
-        reasoningEffort = reasoningEffort
+        reasoningEffort = reasoningEffort,
+        presetId = presetId
     )
 
     private fun ProviderConfig.toEntity(): ProviderEntity = ProviderEntity(
@@ -115,6 +117,7 @@ class ProviderRepository(
         enabled = enabled,
         temperature = temperature,
         maxTokens = maxTokens,
-        reasoningEffort = reasoningEffort
+        reasoningEffort = reasoningEffort,
+        presetId = presetId
     )
 }

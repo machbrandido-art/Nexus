@@ -33,7 +33,13 @@ data class ProviderConfig(
     val enabled: Boolean = true,
     val temperature: Float? = null,
     val maxTokens: Int? = null,
-    val reasoningEffort: String? = null
+    val reasoningEffort: String? = null,
+    /**
+     * Optional preset marker. `null` for hand-created providers. Presets that want
+     * provider-specific behaviour (NVIDIA NIM custom error copy, etc.) set this,
+     * and the adapter inspects it via the config.
+     */
+    val presetId: String? = null
 )
 
 data class ChatMessage(val role: Role, val content: String) {

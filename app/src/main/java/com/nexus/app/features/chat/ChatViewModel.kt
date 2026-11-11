@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nexus.app.data.ConversationRepository
 import com.nexus.app.data.ProviderRepository
 import com.nexus.app.data.datastore.SettingsRepository
+import com.nexus.app.data.db.ConversationEntity
 import com.nexus.app.data.db.MessageEntity
 import com.nexus.app.modes.Mode
 import com.nexus.app.modes.ModeRepository
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,6 +27,17 @@ data class UiMessage(
     val role: ChatMessage.Role,
     val content: String,
     val reasoning: String?
+)
+
+data class ConversationSummary(
+    val id: String,
+    val title: String,
+    val providerId: String?,
+    val model: String?,
+    val mode: String,
+    val updatedAt: Long,
+    val pinned: Boolean,
+    val archived: Boolean
 )
 
 data class ChatUiState(
@@ -39,7 +52,8 @@ data class ChatUiState(
     val providers: List<ProviderConfig> = emptyList(),
     val selectedProviderId: String? = null,
     val selectedModel: String? = null,
-    val modeId: String = "chat"
+    val modeId: String = "chat",
+    val recentConversations: List<ConversationSummary> = emptyList()
 )
 
 class ChatViewModel(
@@ -78,6 +92,21 @@ class ChatViewModel(
         viewModelScope.launch {
             modeRepo.currentModeId.collect { id ->
                 _uiState.update { it.copy(modeId = id) }
+            }
+        }
+        viewModelScope.launch {
+            conversationRepo.observeAll().collect { list ->
+                _uiState.update {
+                    it.copy(
+                        recentConversations = list
+                            .filter { c -> !c.archived }
+                            .sortedWith(
+                                compareByDescending<ConversationEntity> { c -> c.pinned }
+                                    .thenByDescending { c -> c.updatedAt }
+                            )
+                            .map { c -> c.toSummary() }
+                    )
+                }
             }
         }
     }
@@ -123,6 +152,57 @@ class ChatViewModel(
                 error = null
             )
         }
+    }
+
+    fun openConversation(id: String) {
+        if (_uiState.value.conversationId == id) return
+        streamJob?.cancel()
+        observeJob?.cancel()
+        _uiState.update {
+            it.copy(
+                conversationId = id,
+                messages = emptyList(),
+                streamingText = "",
+                streamingReasoning = "",
+                isStreaming = false,
+                input = "",
+                error = null
+            )
+        }
+        viewModelScope.launch {
+            val conv = conversationRepo.observeConversation(id).first() ?: return@launch
+            if (conv.mode != modeRepo.currentModeId.value) {
+                modeRepo.setCurrentMode(conv.mode)
+            }
+            _uiState.update {
+                it.copy(
+                    selectedProviderId = conv.providerId ?: it.selectedProviderId,
+                    selectedModel = conv.model ?: it.selectedModel,
+                    title = conv.title
+                )
+            }
+            observeConversation(id)
+        }
+    }
+
+    fun renameConversation(id: String, title: String) {
+        if (title.isBlank()) return
+        viewModelScope.launch { conversationRepo.renameConversation(id, title.trim()) }
+    }
+
+    fun setPinned(id: String, pinned: Boolean) {
+        viewModelScope.launch { conversationRepo.setPinned(id, pinned) }
+    }
+
+    fun setArchived(id: String, archived: Boolean) {
+        viewModelScope.launch { conversationRepo.setArchived(id, archived) }
+    }
+
+    fun deleteConversation(id: String) {
+        if (_uiState.value.conversationId == id) {
+            newChat()
+        }
+        viewModelScope.launch { conversationRepo.deleteConversation(id) }
     }
 
     fun cancelStreaming() {
@@ -254,5 +334,16 @@ class ChatViewModel(
         },
         content = content,
         reasoning = reasoning
+    )
+
+    private fun ConversationEntity.toSummary(): ConversationSummary = ConversationSummary(
+        id = id,
+        title = title,
+        providerId = providerId,
+        model = model,
+        mode = mode,
+        updatedAt = updatedAt,
+        pinned = pinned,
+        archived = archived
     )
 }

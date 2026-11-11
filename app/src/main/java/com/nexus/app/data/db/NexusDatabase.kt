@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [ProviderEntity::class, ConversationEntity::class, MessageEntity::class, KanbanCardEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class NexusDatabase : RoomDatabase() {

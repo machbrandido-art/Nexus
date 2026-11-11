@@ -2,7 +2,6 @@ package com.nexus.app.providers.compat
 
 import com.nexus.app.providers.Capabilities
 import com.nexus.app.providers.ChatEvent
-import com.nexus.app.providers.ChatMessage
 import com.nexus.app.providers.ChatRequest
 import com.nexus.app.providers.ModelInfo
 import com.nexus.app.providers.ProviderAdapter
@@ -156,11 +155,25 @@ open class OpenAiCompatibleAdapter(
         return json.encodeToString(ApiRequest.serializer(), body)
     }
 
-    private fun classifyHttp(code: Int, message: String): ProviderError = when (code) {
-        401, 403 -> ProviderError.Unauthorized("Unauthorized: $message")
-        429 -> ProviderError.RateLimited("Rate limited: $message")
-        in 500..599 -> ProviderError.Server("Server error $code: $message")
-        else -> ProviderError.Unknown("HTTP $code: $message")
+    /**
+     * Maps an HTTP status to a typed `ProviderError`. When this adapter is
+     * running under the NVIDIA NIM preset, 401/429/404 use the preset's exact
+     * copy ("Invalid NVIDIA key", etc.). Everything else falls back to the
+     * generic text used by every other OpenAI-compatible provider.
+     */
+    private fun classifyHttp(code: Int, message: String): ProviderError {
+        val presetMessage = if (config.presetId == NimPreset.ID) {
+            NimPreset.errorMessageForStatus(code)
+        } else {
+            null
+        }
+        return when (code) {
+            401, 403 -> ProviderError.Unauthorized(presetMessage ?: "Unauthorized: $message")
+            429 -> ProviderError.RateLimited(presetMessage ?: "Rate limited: $message")
+            404 -> ProviderError.Unknown(presetMessage ?: "Not found: $message")
+            in 500..599 -> ProviderError.Server("Server error $code: $message")
+            else -> ProviderError.Unknown(presetMessage ?: "HTTP $code: $message")
+        }
     }
 
     @Serializable
