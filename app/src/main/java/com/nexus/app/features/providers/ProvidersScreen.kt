@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -63,6 +65,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexus.app.R
+import com.nexus.app.providers.ModelInfo
 import com.nexus.app.providers.ProviderConfig
 import com.nexus.app.providers.ProviderType
 import com.nexus.app.providers.compat.AllProviderPresets
@@ -206,7 +209,7 @@ fun ProvidersScreen(viewModel: ProvidersViewModel = koinViewModel()) {
 @Composable
 private fun QuickAddChips(onPresetTap: (ProviderPreset) -> Unit) {
     LazyRow(
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(AllProviderPresets, key = { it.id }) { preset ->
@@ -294,6 +297,20 @@ private fun ProviderEditDialog(
     val preset = presetById(form.presetId)
     val keyRequired = preset?.apiKeyRequired ?: true
     val isNim = form.presetId == NimPreset.ID
+    val hint: String? = preset?.apiKeyHint
+
+    val supporting: (@Composable () -> Unit)? = when {
+        isNim && form.apiKey.isNotBlank() -> {
+            { Text(stringResource(R.string.nim_key_hint)) }
+        }
+        isNim && !NimPreset.isCloudEndpoint(form.baseUrl) -> {
+            { Text(stringResource(R.string.nim_local_key_note)) }
+        }
+        hint != null -> {
+            { Text(hint) }
+        }
+        else -> null
+    }
 
     Dialog(
         onDismissRequest = onCancel,
@@ -390,15 +407,7 @@ private fun ProviderEditDialog(
                             )
                         )
                     },
-                    supportingText = when {
-                        isNim && form.apiKey.isNotBlank() ->
-                            { Text(stringResource(R.string.nim_key_hint)) }
-                        isNim && !NimPreset.isCloudEndpoint(form.baseUrl) ->
-                            { Text(stringResource(R.string.nim_local_key_note)) }
-                        preset?.apiKeyHint != null ->
-                            { Text(preset.apiKeyHint) }
-                        else -> null
-                    },
+                    supportingText = supporting,
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
@@ -523,7 +532,7 @@ private fun ProviderEditDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NimModelPickerSheet(
-    allModels: List<com.nexus.app.providers.ModelInfo>,
+    allModels: List<ModelInfo>,
     selectedIds: Set<String>,
     onToggle: (String) -> Unit,
     onApply: () -> Unit,
@@ -533,21 +542,26 @@ private fun NimModelPickerSheet(
     var selectedVendor by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val vendors = remember(allModels) {
-        listOf<String?>(null) + NimPreset.groupModelsByVendor(allModels.map { it.id }).keys
+    val vendorKeys: List<String> = NimPreset
+        .groupModelsByVendor(allModels.map { model -> model.id })
+        .keys
+        .toList()
+    val vendors: List<String?> = buildList {
+        add(null)
+        addAll(vendorKeys)
     }
 
-    val filtered = remember(allModels, search, selectedVendor) {
-        allModels.filter { model ->
-            val matchesSearch = search.isBlank() ||
-                model.id.contains(search, ignoreCase = true)
-            val matchesVendor = selectedVendor == null || run {
-                val slash = model.id.indexOf('/')
-                val prefix = if (slash > 0) model.id.substring(0, slash) else "other"
-                prefix == selectedVendor
-            }
-            matchesSearch && matchesVendor
+    val filtered: List<ModelInfo> = allModels.filter { model ->
+        val matchesSearch: Boolean = search.isBlank() ||
+            model.id.contains(search, ignoreCase = true)
+        val matchesVendor: Boolean = if (selectedVendor == null) {
+            true
+        } else {
+            val slash = model.id.indexOf('/')
+            val prefix = if (slash > 0) model.id.substring(0, slash) else "other"
+            prefix == selectedVendor
         }
+        matchesSearch && matchesVendor
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -571,15 +585,15 @@ private fun NimModelPickerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 4.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(24.dp)
             )
 
             LazyRow(
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(vendors) { vendor ->
-                    val label = vendor ?: "All"
+                    val label: String = vendor ?: stringResource(R.string.nim_vendor_all)
                     FilterChip(
                         selected = selectedVendor == vendor,
                         onClick = { selectedVendor = vendor },

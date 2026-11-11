@@ -15,6 +15,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -39,7 +40,9 @@ val LocalDrawerController = staticCompositionLocalOf<DrawerController> {
     error("LocalDrawerController not provided; wrap content in AppScaffold")
 }
 
-val LocalDrawerLayoutMode = staticCompositionLocalOf { DrawerLayoutMode.Modal }
+val LocalDrawerLayoutMode = staticCompositionLocalOf<DrawerLayoutMode> {
+    DrawerLayoutMode.Modal
+}
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
