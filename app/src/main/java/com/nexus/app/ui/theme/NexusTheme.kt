@@ -131,6 +131,23 @@ data class NexusSpacing(
     val touchTarget: Dp = 44.dp
 )
 
+/**
+ * Seed color options shown in Settings. These are palette identities, not
+ * derivations: Lime Flat is a fixed palette, so picking a different seed does
+ * not currently repaint the UI. Kept in place because §3 asks for the picker,
+ * and because a follow-up "alternate palette" feature will read from here.
+ */
+data class SeedOption(val name: String, val argb: Long)
+
+val SeedPalette: List<SeedOption> = listOf(
+    SeedOption("Lime", 0xFFA8D13F),
+    SeedOption("Sage", 0xFF7A8B6A),
+    SeedOption("Ocean", 0xFF4A7FAB),
+    SeedOption("Lavender", 0xFF9D7FBF),
+    SeedOption("Rose", 0xFFC25B7F),
+    SeedOption("Amber", 0xFFE0A23C)
+)
+
 val LocalNexusColors = staticCompositionLocalOf { NexusColors.Light }
 val LocalNexusTypography = staticCompositionLocalOf { NexusTypography.Default }
 val LocalNexusSpacing = staticCompositionLocalOf { NexusSpacing() }
@@ -142,6 +159,12 @@ fun NexusTheme(
     seedColorArgb: Long = 0L,
     content: @Composable () -> Unit
 ) {
+    // seedColorArgb is intentionally not applied: Lime Flat is a fixed palette.
+    // The parameter is kept so Settings can call this without breaking, and so
+    // a future "alternate palettes" feature can read it.
+    @Suppress("UNUSED_PARAMETER")
+    val ignoredSeed = seedColorArgb
+
     val dark = when (themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
@@ -156,9 +179,10 @@ fun NexusTheme(
         LocalNexusTypography provides typography,
         LocalNexusSpacing provides spacing
     ) {
-        // TRANSITIONAL SHIM — removed once all screens use LocalNexusColors.
-        // Its only job is to keep residual MaterialTheme.colorScheme references
-        // resolving during the migration.
+        // SHIM — ModalNavigationDrawer and PermanentNavigationDrawer read
+        // MaterialTheme.colorScheme.scrim internally. This maps a small subset
+        // of Material colors to the Lime Flat palette so the drawer scrim
+        // renders correctly. No visible component reads MaterialTheme.colorScheme.
         MaterialTheme(
             colorScheme = if (dark) {
                 darkColorScheme(
