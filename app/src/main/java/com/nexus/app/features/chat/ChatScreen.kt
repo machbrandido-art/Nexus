@@ -1,53 +1,36 @@
 package com.nexus.app.features.chat
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,10 +39,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexus.app.R
 import com.nexus.app.modes.Mode
@@ -67,27 +53,38 @@ import com.nexus.app.modes.PresetModes
 import com.nexus.app.providers.ChatMessage
 import com.nexus.app.providers.ProviderConfig
 import com.nexus.app.providers.compat.NimPreset
-import com.nexus.app.ui.components.ErrorBanner
-import com.nexus.app.ui.components.MessageBubble
-import com.nexus.app.ui.components.SimpleMarkdown
-import com.nexus.app.ui.components.StreamingIndicator
+import com.nexus.app.ui.components.ChatBubble
+import com.nexus.app.ui.components.CircleIconButton
+import com.nexus.app.ui.components.Composer
+import com.nexus.app.ui.components.EmptyState
+import com.nexus.app.ui.components.ModeChip
+import com.nexus.app.ui.components.NexusButton
+import com.nexus.app.ui.components.NexusButtonVariant
+import com.nexus.app.ui.components.NexusMenu
+import com.nexus.app.ui.components.NexusMenuItem
+import com.nexus.app.ui.components.NexusTextField
 import com.nexus.app.ui.navigation.LocalDrawerController
+import com.nexus.app.ui.theme.LocalNexusColors
+import com.nexus.app.ui.theme.LocalNexusSpacing
+import com.nexus.app.ui.theme.LocalNexusTypography
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     onOpenProviders: () -> Unit,
     viewModel: ChatViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val drawerController = LocalDrawerController.current
+    val drawer = LocalDrawerController.current
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
 
     var showModeMenu by remember { mutableStateOf(false) }
-    var showModelSheet by remember { mutableStateOf(false) }
-    var showTopMenu by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showOverflow by remember { mutableStateOf(false) }
+    var showModelPicker by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
+    var showDelete by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val modes: List<Mode> = remember { PresetModes }
@@ -98,438 +95,275 @@ fun ChatScreen(
         if (target >= 0) listState.animateScrollToItem(target)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = { drawerController.openDrawer() }) {
-                        Icon(
-                            Icons.Filled.Menu,
-                            contentDescription = stringResource(R.string.cd_open_drawer)
-                        )
-                    }
-                },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = state.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Box {
-                            AssistChip(
-                                onClick = { showModeMenu = true },
-                                label = {
-                                    Text(
-                                        text = stringResource(currentMode.nameResId),
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        currentMode.icon,
-                                        contentDescription = stringResource(R.string.cd_mode_switch),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            )
-                            DropdownMenu(
-                                expanded = showModeMenu,
-                                onDismissRequest = { showModeMenu = false }
-                            ) {
-                                modes.forEach { mode ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(mode.nameResId)) },
-                                        leadingIcon = {
-                                            Icon(mode.icon, contentDescription = null)
-                                        },
-                                        trailingIcon = if (mode.id == currentMode.id) {
-                                            {
-                                                Icon(
-                                                    Icons.Filled.Check,
-                                                    contentDescription = null
-                                                )
-                                            }
-                                        } else null,
-                                        onClick = {
-                                            viewModel.switchMode(mode.id)
-                                            showModeMenu = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                },
-                actions = {
-                    if (state.conversationId != null) {
-                        IconButton(onClick = { showTopMenu = true }) {
-                            Icon(
-                                Icons.Filled.MoreVert,
-                                contentDescription = stringResource(R.string.chat_topbar_menu)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showTopMenu,
-                            onDismissRequest = { showTopMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.chat_menu_rename)) },
-                                leadingIcon = {
-                                    Icon(Icons.Filled.Edit, contentDescription = null)
-                                },
-                                onClick = {
-                                    showRenameDialog = true
-                                    showTopMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.chat_menu_delete)) },
-                                leadingIcon = {
-                                    Icon(Icons.Filled.Delete, contentDescription = null)
-                                },
-                                onClick = {
-                                    showDeleteDialog = true
-                                    showTopMenu = false
-                                }
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
-    ) { padding ->
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(c.bg)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .imePadding()
+    ) {
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .imePadding()
+                .fillMaxWidth()
+                .padding(horizontal = spacing.sm, vertical = spacing.xs),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (state.providers.isEmpty()) {
-                EmptyProvidersPrompt(onOpenProviders = onOpenProviders)
-                return@Column
-            }
-
-            Box(modifier = Modifier.weight(1f)) {
-                if (state.messages.isEmpty() && state.streamingText.isEmpty()) {
-                    EmptyChatState()
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        state = listState,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(items = state.messages, key = { it.id }) { msg ->
-                            MessageBubble(
-                                message = ChatMessage(msg.role, msg.content),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        if (state.streamingText.isNotEmpty() || state.streamingReasoning.isNotEmpty()) {
-                            item(key = "__streaming__") {
-                                if (state.streamingReasoning.isNotEmpty()) {
-                                    ReasoningBlock(state.streamingReasoning)
-                                }
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(18.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Column(modifier = Modifier.padding(14.dp)) {
-                                        if (state.streamingText.isNotEmpty()) {
-                                            SimpleMarkdown(text = state.streamingText)
-                                        } else {
-                                            StreamingIndicator()
-                                        }
-                                    }
-                                }
+            CircleIconButton(
+                icon = Icons.Filled.Menu,
+                contentDescription = stringResource(R.string.cd_open_drawer),
+                onClick = { drawer.openDrawer() }
+            )
+            Spacer(Modifier.width(spacing.xs))
+            BasicText(
+                text = state.title,
+                style = type.subtitle.copy(color = c.text),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Box {
+                ModeChip(
+                    icon = currentMode.icon,
+                    label = stringResource(currentMode.nameResId),
+                    onClick = { showModeMenu = true }
+                )
+                NexusMenu(
+                    expanded = showModeMenu,
+                    onDismissRequest = { showModeMenu = false },
+                    alignment = Alignment.TopEnd,
+                    offset = IntOffset(0, 44)
+                ) {
+                    modes.forEach { mode ->
+                        NexusMenuItem(
+                            text = stringResource(mode.nameResId),
+                            icon = mode.icon,
+                            selected = mode.id == currentMode.id,
+                            onClick = {
+                                viewModel.switchMode(mode.id)
+                                showModeMenu = false
                             }
-                        } else if (state.isStreaming) {
-                            item(key = "__thinking__") { StreamingIndicator() }
-                        }
+                        )
                     }
                 }
             }
+            Spacer(Modifier.width(spacing.xs))
+            Box {
+                CircleIconButton(
+                    icon = Icons.Filled.MoreVert,
+                    contentDescription = stringResource(R.string.chat_topbar_menu),
+                    onClick = { showOverflow = true },
+                    variant = NexusButtonVariant.Surface
+                )
+                NexusMenu(
+                    expanded = showOverflow,
+                    onDismissRequest = { showOverflow = false },
+                    alignment = Alignment.TopEnd,
+                    offset = IntOffset(0, 44)
+                ) {
+                    if (state.conversationId != null) {
+                        NexusMenuItem(
+                            text = stringResource(R.string.chat_menu_rename),
+                            icon = Icons.Filled.Edit,
+                            onClick = { showRename = true; showOverflow = false }
+                        )
+                        NexusMenuItem(
+                            text = stringResource(R.string.chat_menu_delete),
+                            icon = Icons.Filled.Delete,
+                            onClick = { showDelete = true; showOverflow = false }
+                        )
+                    }
+                }
+            }
+        }
 
-            if (state.error != null) {
-                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    ErrorBanner(
-                        message = state.error!!,
-                        onRetry = { viewModel.clearError() }
+        if (state.providers.isEmpty()) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    EmptyState(
+                        title = stringResource(R.string.error_no_provider),
+                        subtitle = stringResource(R.string.chat_empty_body)
+                    )
+                    Spacer(Modifier.height(spacing.md))
+                    NexusButton(
+                        text = stringResource(R.string.providers_add),
+                        onClick = onOpenProviders,
+                        variant = NexusButtonVariant.Ink
                     )
                 }
             }
-
-            Composer(
-                input = state.input,
-                isStreaming = state.isStreaming,
-                currentModel = state.selectedModel,
-                onInputChange = viewModel::updateInput,
-                onSend = viewModel::send,
-                onStop = viewModel::cancelStreaming,
-                onOpenModelPicker = { showModelSheet = true }
-            )
+            return@Column
         }
+
+        Box(modifier = Modifier.weight(1f)) {
+            if (state.messages.isEmpty() && state.streamingText.isEmpty() && state.streamingReasoning.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    EmptyState(
+                        title = stringResource(R.string.chat_empty_title),
+                        subtitle = stringResource(R.string.chat_empty_body)
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = spacing.md, vertical = spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(spacing.sm)
+                ) {
+                    items(items = state.messages, key = { it.id }) { msg ->
+                        ChatBubble(
+                            message = ChatMessage(msg.role, msg.content),
+                            reasoning = msg.reasoning
+                        )
+                    }
+                    if (state.streamingText.isNotEmpty() || state.streamingReasoning.isNotEmpty()) {
+                        item(key = "__streaming__") {
+                            ChatBubble(
+                                message = ChatMessage(ChatMessage.Role.ASSISTANT, state.streamingText),
+                                reasoning = state.streamingReasoning.ifBlank { null }
+                            )
+                        }
+                    } else if (state.isStreaming) {
+                        item(key = "__thinking__") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .background(c.surface)
+                                    .padding(spacing.md),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                BasicText(
+                                    text = "Thinking…",
+                                    style = type.body.copy(color = c.textMuted)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (state.error != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.md, vertical = spacing.xs)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(c.error)
+                    .padding(horizontal = spacing.md, vertical = spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicText(
+                    text = state.error!!,
+                    style = type.body.copy(color = c.onInk),
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(spacing.xs))
+                BasicText(
+                    text = "Dismiss",
+                    style = type.caption.copy(color = c.onInk),
+                    modifier = Modifier.clickable { viewModel.clearError() }
+                )
+            }
+        }
+
+        Composer(
+            input = state.input,
+            isStreaming = state.isStreaming,
+            currentModel = state.selectedModel,
+            onInputChange = viewModel::updateInput,
+            onSend = viewModel::send,
+            onStop = viewModel::cancelStreaming,
+            onOpenModelPicker = { showModelPicker = true }
+        )
     }
 
-    if (showModelSheet) {
-        ModelSheet(
+    if (showModelPicker) {
+        ModelPickerDialog(
             providers = state.providers,
             selectedProviderId = state.selectedProviderId,
             selectedModel = state.selectedModel,
             onSelect = { pid, mid ->
                 viewModel.selectProviderModel(pid, mid)
-                showModelSheet = false
+                showModelPicker = false
             },
-            onDismiss = { showModelSheet = false }
+            onDismiss = { showModelPicker = false }
         )
     }
 
-    if (showRenameDialog) {
+    if (showRename) {
         val convId = state.conversationId
         var newTitle by remember(convId) { mutableStateOf(state.title) }
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text(stringResource(R.string.chat_menu_rename)) },
-            text = {
-                OutlinedTextField(
-                    value = newTitle,
-                    onValueChange = { newTitle = it },
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.providers_name)) }
-                )
+        RenameDialog(
+            initial = newTitle,
+            onValueChange = { newTitle = it },
+            onConfirm = {
+                if (convId != null) viewModel.renameConversation(convId, newTitle)
+                showRename = false
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (convId != null) viewModel.renameConversation(convId, newTitle)
-                    showRenameDialog = false
-                }) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
+            onDismiss = { showRename = false }
         )
     }
 
-    if (showDeleteDialog) {
+    if (showDelete) {
         val convId = state.conversationId
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(R.string.chat_menu_delete)) },
-            text = { Text(stringResource(R.string.providers_delete_confirm_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (convId != null) viewModel.deleteConversation(convId)
-                    showDeleteDialog = false
-                }) { Text(stringResource(R.string.action_delete)) }
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.chat_menu_delete),
+            body = stringResource(R.string.providers_delete_confirm_body),
+            onConfirm = {
+                if (convId != null) viewModel.deleteConversation(convId)
+                showDelete = false
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
+            onDismiss = { showDelete = false }
         )
     }
 }
 
 @Composable
-private fun EmptyChatState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.chat_empty_title),
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.chat_empty_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptyProvidersPrompt(onOpenProviders: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.error_no_provider),
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onOpenProviders) {
-                Text(stringResource(R.string.providers_add))
-            }
-        }
-    }
-}
-
-@Composable
-private fun Composer(
-    input: String,
-    isStreaming: Boolean,
-    currentModel: String?,
-    onInputChange: (String) -> Unit,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-    onOpenModelPicker: () -> Unit
-) {
-    Surface(tonalElevation = 2.dp) {
-        Column {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AssistChip(
-                    onClick = onOpenModelPicker,
-                    label = {
-                        Text(
-                            text = currentModel ?: stringResource(R.string.chat_switch_model),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Filled.Cloud,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        Icon(
-                            Icons.Filled.ExpandMore,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = onInputChange,
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text(stringResource(R.string.chat_input_hint)) },
-                    maxLines = 6,
-                    shape = RoundedCornerShape(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                FilledIconButton(
-                    onClick = { if (isStreaming) onStop() else onSend() },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    if (isStreaming) {
-                        Icon(
-                            Icons.Filled.Stop,
-                            contentDescription = stringResource(R.string.action_stop)
-                        )
-                    } else {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(R.string.action_send)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReasoningBlock(text: String) {
-    var expanded by remember { mutableStateOf(false) }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.chat_reasoning),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(
-                    onClick = { expanded = !expanded },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.ExpandMore,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            if (expanded) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ModelSheet(
+private fun ModelPickerDialog(
     providers: List<ProviderConfig>,
     selectedProviderId: String?,
     selectedModel: String?,
     onSelect: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
     var search by remember { mutableStateOf("") }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight(0.85f)
-                .padding(bottom = 16.dp)
+                .fillMaxSize()
+                .background(c.bg)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(spacing.md)
         ) {
-            Text(
-                text = stringResource(R.string.chat_switch_model),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-            )
-            OutlinedTextField(
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BasicText(
+                    text = stringResource(R.string.chat_switch_model),
+                    style = type.title.copy(color = c.text),
+                    modifier = Modifier.weight(1f)
+                )
+                CircleIconButton(
+                    icon = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.action_close),
+                    onClick = onDismiss,
+                    variant = NexusButtonVariant.Surface
+                )
+            }
+            Spacer(Modifier.height(spacing.sm))
+            NexusTextField(
                 value = search,
                 onValueChange = { search = it },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                placeholder = { Text(stringResource(R.string.nim_model_search_hint)) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(24.dp)
+                placeholder = stringResource(R.string.nim_model_search_hint),
+                singleLine = true
             )
-
+            Spacer(Modifier.height(spacing.sm))
             LazyColumn(modifier = Modifier.weight(1f)) {
                 providers.forEach { provider ->
                     val filtered = provider.models.filter {
@@ -538,38 +372,28 @@ private fun ModelSheet(
                     if (filtered.isEmpty()) return@forEach
 
                     item(key = "hdr-${provider.id}") {
-                        Text(
+                        BasicText(
                             text = provider.name,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(
-                                start = 20.dp,
-                                end = 20.dp,
-                                top = 12.dp,
-                                bottom = 4.dp
-                            )
+                            style = type.caption.copy(color = c.limeDeep),
+                            modifier = Modifier.padding(vertical = spacing.xs)
                         )
                     }
-
                     if (provider.presetId == NimPreset.ID) {
                         val grouped = NimPreset.groupModelsByVendor(filtered)
                         grouped.forEach { (vendor, models) ->
-                            item(key = "vendor-${provider.id}-$vendor") {
-                                Text(
+                            item(key = "v-${provider.id}-$vendor") {
+                                BasicText(
                                     text = vendor,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = type.caption.copy(color = c.textMuted),
                                     modifier = Modifier.padding(
-                                        start = 32.dp,
-                                        end = 20.dp,
-                                        top = 6.dp,
+                                        start = spacing.sm,
+                                        top = spacing.xs,
                                         bottom = 2.dp
                                     )
                                 )
                             }
                             items(models, key = { "m-${provider.id}-$it" }) { model ->
-                                ModelRow(
+                                ModelPickRow(
                                     model = model,
                                     isSelected = provider.id == selectedProviderId && model == selectedModel,
                                     onClick = { onSelect(provider.id, model) }
@@ -578,7 +402,7 @@ private fun ModelSheet(
                         }
                     } else {
                         items(filtered, key = { "m-${provider.id}-$it" }) { model ->
-                            ModelRow(
+                            ModelPickRow(
                                 model = model,
                                 isSelected = provider.id == selectedProviderId && model == selectedModel,
                                 onClick = { onSelect(provider.id, model) }
@@ -592,33 +416,118 @@ private fun ModelSheet(
 }
 
 @Composable
-private fun ModelRow(
+private fun ModelPickRow(
     model: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
-        else MaterialTheme.colorScheme.surface
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (isSelected) c.lime else c.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = spacing.md, vertical = spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        BasicText(
+            text = model,
+            style = type.body.copy(color = if (isSelected) c.ink else c.text),
+            modifier = Modifier.weight(1f)
+        )
+        if (isSelected) {
+            Icon(Icons.Filled.Check, contentDescription = null, tint = c.ink)
+        }
+    }
+}
+
+@Composable
+private fun RenameDialog(
+    initial: String,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
+    var value by remember { mutableStateOf(initial) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(28.dp))
+                .background(c.bg)
+                .padding(spacing.lg)
         ) {
-            Text(
-                text = model,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
+            BasicText(
+                text = stringResource(R.string.action_rename),
+                style = type.title.copy(color = c.text)
             )
-            if (isSelected) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+            Spacer(Modifier.height(spacing.md))
+            NexusTextField(
+                value = value,
+                onValueChange = {
+                    value = it
+                    onValueChange(it)
+                },
+                singleLine = true
+            )
+            Spacer(Modifier.height(spacing.lg))
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                NexusButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss,
+                    variant = NexusButtonVariant.Surface,
+                    modifier = Modifier.weight(1f)
+                )
+                NexusButton(
+                    text = stringResource(R.string.action_save),
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfirmDeleteDialog(
+    title: String,
+    body: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(28.dp))
+                .background(c.bg)
+                .padding(spacing.lg)
+        ) {
+            BasicText(text = title, style = type.title.copy(color = c.text))
+            Spacer(Modifier.height(spacing.sm))
+            BasicText(text = body, style = type.body.copy(color = c.textMuted))
+            Spacer(Modifier.height(spacing.lg))
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                NexusButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss,
+                    variant = NexusButtonVariant.Surface,
+                    modifier = Modifier.weight(1f)
+                )
+                NexusButton(
+                    text = stringResource(R.string.action_delete),
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

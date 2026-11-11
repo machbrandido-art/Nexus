@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
@@ -27,20 +30,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewKanban
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,13 +38,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.nexus.app.R
 import com.nexus.app.features.chat.ConversationSummary
 import com.nexus.app.modes.PresetModes
 import com.nexus.app.providers.ProviderConfig
+import com.nexus.app.ui.components.DrawerItem
+import com.nexus.app.ui.components.NexusButton
+import com.nexus.app.ui.components.NexusButtonVariant
+import com.nexus.app.ui.components.NexusMenu
+import com.nexus.app.ui.components.NexusMenuItem
+import com.nexus.app.ui.components.NexusTextField
+import com.nexus.app.ui.theme.LocalNexusColors
+import com.nexus.app.ui.theme.LocalNexusSpacing
+import com.nexus.app.ui.theme.LocalNexusTypography
 
 data class DrawerUiState(
     val recentConversations: List<ConversationSummary> = emptyList(),
@@ -80,6 +82,9 @@ fun AppDrawerContent(
     onActiveProviderTap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val c = LocalNexusColors.current
+    val spacing = LocalNexusSpacing.current
+
     var search by remember { mutableStateOf("") }
     var actionTarget by remember { mutableStateOf<ConversationSummary?>(null) }
     var renameTarget by remember { mutableStateOf<ConversationSummary?>(null) }
@@ -94,308 +99,375 @@ fun AppDrawerContent(
         }
     }
 
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxHeight()
-            .width(320.dp)
+            .background(c.bg)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(12.dp))
-            ExtendedFloatingActionButton(
-                onClick = onNewChat,
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.drawer_new_chat)) },
-                modifier = Modifier.fillMaxWidth()
-            )
+        item {
+            LimeHeader(onNewChat = onNewChat)
         }
 
-        Divider(modifier = Modifier.padding(vertical = 4.dp))
-
-        Text(
-            text = stringResource(R.string.drawer_modes_header),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp)
-        )
-
-        PresetModes.forEach { mode ->
-            NavigationDrawerItem(
-                label = { Text(stringResource(mode.nameResId)) },
-                icon = { Icon(mode.icon, contentDescription = null) },
-                selected = state.activeModeId == mode.id,
-                onClick = { onModeSelected(mode.id) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-            )
-        }
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.drawer_add_mode)) },
-            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            selected = false,
-            onClick = onAddMode,
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        Spacer(Modifier.height(8.dp))
-        Divider(modifier = Modifier.padding(vertical = 4.dp))
-
-        Text(
-            text = stringResource(R.string.drawer_recent_header),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp)
-        )
-        OutlinedTextField(
-            value = search,
-            onValueChange = { search = it },
-            placeholder = { Text(stringResource(R.string.drawer_search_chats_hint)) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            shape = RoundedCornerShape(24.dp)
-        )
-
-        if (filtered.isEmpty()) {
-            Text(
-                text = stringResource(R.string.drawer_no_conversations),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp)
-            )
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(items = filtered, key = { it.id }) { conv ->
-                    ConversationRow(
-                        conv = conv,
-                        selected = conv.id == state.activeConversationId && state.currentRoute == "chat",
-                        onClick = { onConversationSelected(conv.id) },
-                        onLongClick = { actionTarget = conv }
+        item {
+            Column(modifier = Modifier.padding(vertical = spacing.xs)) {
+                BasicText(
+                    text = stringResource(R.string.drawer_modes_header),
+                    style = LocalNexusTypography.current.caption.copy(color = c.textMuted),
+                    modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xs)
+                )
+                PresetModes.forEach { mode ->
+                    DrawerItem(
+                        icon = mode.icon,
+                        label = stringResource(mode.nameResId),
+                        selected = state.activeModeId == mode.id,
+                        onClick = { onModeSelected(mode.id) }
                     )
                 }
+                DrawerItem(
+                    icon = Icons.Filled.Add,
+                    label = stringResource(R.string.drawer_add_mode),
+                    selected = false,
+                    onClick = onAddMode
+                )
             }
         }
 
-        Divider()
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.nav_providers)) },
-            icon = { Icon(Icons.Filled.Cloud, contentDescription = null) },
-            selected = state.currentRoute == "providers",
-            onClick = { onNavigate("providers") },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.nav_kanban)) },
-            icon = { Icon(Icons.Filled.ViewKanban, contentDescription = null) },
-            selected = state.currentRoute == "kanban",
-            onClick = { onNavigate("kanban") },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.nav_settings)) },
-            icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-            selected = state.currentRoute == "settings",
-            onClick = { onNavigate("settings") },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        Divider()
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onActiveProviderTap)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = state.activeProvider?.name ?: stringResource(R.string.drawer_active_provider_label),
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+        item {
+            Column(modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xs)) {
+                BasicText(
+                    text = stringResource(R.string.drawer_recent_header),
+                    style = LocalNexusTypography.current.caption.copy(color = c.textMuted),
+                    modifier = Modifier.padding(vertical = spacing.xs)
                 )
-                Text(
-                    text = state.activeModel ?: "—",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                NexusTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    placeholder = stringResource(R.string.drawer_search_chats_hint),
+                    singleLine = true
                 )
             }
-            Icon(
-                Icons.Filled.ExpandMore,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
+        }
+
+        if (filtered.isEmpty()) {
+            item {
+                BasicText(
+                    text = stringResource(R.string.drawer_no_conversations),
+                    style = LocalNexusTypography.current.caption.copy(color = c.textMuted),
+                    modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm)
+                )
+            }
+        } else {
+            items(items = filtered, key = { it.id }) { conv ->
+                RecentRow(
+                    conv = conv,
+                    selected = conv.id == state.activeConversationId && state.currentRoute == "chat",
+                    onClick = { onConversationSelected(conv.id) },
+                    onLongClick = { actionTarget = conv }
+                )
+            }
+        }
+
+        item {
+            Column(modifier = Modifier.padding(vertical = spacing.xs)) {
+                DrawerItem(
+                    icon = Icons.Filled.Cloud,
+                    label = stringResource(R.string.nav_providers),
+                    selected = state.currentRoute == "providers",
+                    onClick = { onNavigate("providers") }
+                )
+                DrawerItem(
+                    icon = Icons.Filled.ViewKanban,
+                    label = stringResource(R.string.nav_kanban),
+                    selected = state.currentRoute == "kanban",
+                    onClick = { onNavigate("kanban") }
+                )
+                DrawerItem(
+                    icon = Icons.Filled.Settings,
+                    label = stringResource(R.string.nav_settings),
+                    selected = state.currentRoute == "settings",
+                    onClick = { onNavigate("settings") }
+                )
+            }
+        }
+
+        item {
+            ProviderChip(
+                provider = state.activeProvider,
+                model = state.activeModel,
+                onClick = onActiveProviderTap
             )
         }
     }
 
     val target = actionTarget
     if (target != null) {
-        DropdownMenu(
-            expanded = true,
-            onDismissRequest = { actionTarget = null }
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.drawer_rename)) },
-                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                onClick = { renameTarget = target; actionTarget = null }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(stringResource(if (target.pinned) R.string.drawer_unpin else R.string.drawer_pin))
-                },
-                leadingIcon = { Icon(Icons.Filled.PushPin, contentDescription = null) },
-                onClick = {
-                    onPinConversation(target.id, !target.pinned)
-                    actionTarget = null
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.drawer_archive)) },
-                leadingIcon = { Icon(Icons.Filled.Archive, contentDescription = null) },
-                onClick = {
-                    onArchiveConversation(target.id)
-                    actionTarget = null
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.drawer_delete_chat)) },
-                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                onClick = { deleteTarget = target; actionTarget = null }
-            )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            NexusMenu(
+                expanded = true,
+                onDismissRequest = { actionTarget = null },
+                alignment = Alignment.Center
+            ) {
+                NexusMenuItem(
+                    text = stringResource(R.string.drawer_rename),
+                    icon = Icons.Filled.Edit,
+                    onClick = { renameTarget = target; actionTarget = null }
+                )
+                NexusMenuItem(
+                    text = stringResource(
+                        if (target.pinned) R.string.drawer_unpin else R.string.drawer_pin
+                    ),
+                    icon = Icons.Filled.PushPin,
+                    onClick = {
+                        onPinConversation(target.id, !target.pinned)
+                        actionTarget = null
+                    }
+                )
+                NexusMenuItem(
+                    text = stringResource(R.string.drawer_archive),
+                    icon = Icons.Filled.Archive,
+                    onClick = {
+                        onArchiveConversation(target.id)
+                        actionTarget = null
+                    }
+                )
+                NexusMenuItem(
+                    text = stringResource(R.string.drawer_delete_chat),
+                    icon = Icons.Filled.Delete,
+                    onClick = { deleteTarget = target; actionTarget = null }
+                )
+            }
         }
     }
 
     val rename = renameTarget
     if (rename != null) {
         var newTitle by remember(rename.id) { mutableStateOf(rename.title) }
-        AlertDialog(
-            onDismissRequest = { renameTarget = null },
-            title = { Text(stringResource(R.string.action_rename)) },
-            text = {
-                OutlinedTextField(
+        Dialog(onDismissRequest = { renameTarget = null }) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(c.bg)
+                    .padding(spacing.lg)
+            ) {
+                BasicText(
+                    text = stringResource(R.string.action_rename),
+                    style = LocalNexusTypography.current.title.copy(color = c.text)
+                )
+                Spacer(Modifier.height(spacing.md))
+                NexusTextField(
                     value = newTitle,
                     onValueChange = { newTitle = it },
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.providers_name)) }
+                    singleLine = true
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onRenameConversation(rename.id, newTitle)
-                    renameTarget = null
-                }) { Text(stringResource(R.string.action_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { renameTarget = null }) {
-                    Text(stringResource(R.string.action_cancel))
+                Spacer(Modifier.height(spacing.lg))
+                Row {
+                    NexusButton(
+                        text = stringResource(R.string.action_cancel),
+                        onClick = { renameTarget = null },
+                        variant = NexusButtonVariant.Surface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(spacing.xs))
+                    NexusButton(
+                        text = stringResource(R.string.action_save),
+                        onClick = {
+                            onRenameConversation(rename.id, newTitle)
+                            renameTarget = null
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
-        )
+        }
     }
 
     val del = deleteTarget
     if (del != null) {
-        AlertDialog(
-            onDismissRequest = { deleteTarget = null },
-            title = { Text(stringResource(R.string.drawer_delete_chat)) },
-            text = { Text(stringResource(R.string.providers_delete_confirm_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeleteConversation(del.id)
-                    deleteTarget = null
-                }) { Text(stringResource(R.string.action_delete)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) {
-                    Text(stringResource(R.string.action_cancel))
+        Dialog(onDismissRequest = { deleteTarget = null }) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(c.bg)
+                    .padding(spacing.lg)
+            ) {
+                BasicText(
+                    text = stringResource(R.string.drawer_delete_chat),
+                    style = LocalNexusTypography.current.title.copy(color = c.text)
+                )
+                Spacer(Modifier.height(spacing.sm))
+                BasicText(
+                    text = stringResource(R.string.providers_delete_confirm_body),
+                    style = LocalNexusTypography.current.body.copy(color = c.textMuted)
+                )
+                Spacer(Modifier.height(spacing.lg))
+                Row {
+                    NexusButton(
+                        text = stringResource(R.string.action_cancel),
+                        onClick = { deleteTarget = null },
+                        variant = NexusButtonVariant.Surface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(spacing.xs))
+                    NexusButton(
+                        text = stringResource(R.string.action_delete),
+                        onClick = {
+                            onDeleteConversation(del.id)
+                            deleteTarget = null
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LimeHeader(onNewChat: () -> Unit) {
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .background(c.lime)
+            .padding(spacing.md)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(c.ink),
+                contentAlignment = Alignment.Center
+            ) {
+                BasicText(text = "N", style = type.title.copy(color = c.lime))
+            }
+            Spacer(Modifier.width(spacing.sm))
+            Column {
+                BasicText(
+                    text = stringResource(R.string.app_name),
+                    style = type.title.copy(color = c.ink)
+                )
+                BasicText(
+                    text = stringResource(R.string.app_tagline),
+                    style = type.caption.copy(color = c.ink.copy(alpha = 0.7f)),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(Modifier.height(spacing.md))
+        NexusButton(
+            text = "+ " + stringResource(R.string.drawer_new_chat),
+            onClick = onNewChat,
+            variant = NexusButtonVariant.Ink,
+            fullWidth = true
         )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ConversationRow(
+private fun RecentRow(
     conv: ConversationSummary,
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                if (selected) MaterialTheme.colorScheme.secondaryContainer
-                else MaterialTheme.colorScheme.surface
-            )
+            .padding(horizontal = spacing.sm, vertical = 2.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) c.lime else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 28.dp, vertical = 10.dp),
+            .padding(horizontal = spacing.sm, vertical = spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (conv.pinned) {
-            Icon(
-                Icons.Filled.PushPin,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.width(6.dp))
-        }
-        Text(
-            text = conv.title,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Chat,
+            contentDescription = null,
+            tint = if (selected) c.ink else c.textMuted,
+            modifier = Modifier.size(18.dp)
         )
+        Spacer(Modifier.width(spacing.sm))
+        BasicText(
+            text = conv.title,
+            style = type.body.copy(color = if (selected) c.ink else c.textMuted),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        if (conv.pinned) {
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                imageVector = Icons.Filled.PushPin,
+                contentDescription = null,
+                tint = if (selected) c.ink else c.textMuted,
+                modifier = Modifier.size(14.dp)
+            )
+        }
     }
 }
 
 @Composable
-fun AppNavigationRail(
-    state: DrawerUiState,
-    onNavigate: (String) -> Unit,
-    onNewChat: () -> Unit
+private fun ProviderChip(
+    provider: ProviderConfig?,
+    model: String?,
+    onClick: () -> Unit
 ) {
-    NavigationRail {
-        Spacer(Modifier.height(8.dp))
-        NavigationRailItem(
-            icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.drawer_new_chat)) },
-            label = { Text(stringResource(R.string.drawer_new_chat)) },
-            selected = false,
-            onClick = onNewChat
-        )
-        Spacer(Modifier.height(8.dp))
-        NavigationRailItem(
-            icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
-            label = { Text(stringResource(R.string.nav_chat)) },
-            selected = state.currentRoute == "chat",
-            onClick = { onNavigate("chat") }
-        )
-        NavigationRailItem(
-            icon = { Icon(Icons.Filled.ViewKanban, contentDescription = null) },
-            label = { Text(stringResource(R.string.nav_kanban)) },
-            selected = state.currentRoute == "kanban",
-            onClick = { onNavigate("kanban") }
-        )
-        NavigationRailItem(
-            icon = { Icon(Icons.Filled.Cloud, contentDescription = null) },
-            label = { Text(stringResource(R.string.nav_providers)) },
-            selected = state.currentRoute == "providers",
-            onClick = { onNavigate("providers") }
-        )
-        NavigationRailItem(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-            label = { Text(stringResource(R.string.nav_settings)) },
-            selected = state.currentRoute == "settings",
-            onClick = { onNavigate("settings") }
+    val c = LocalNexusColors.current
+    val type = LocalNexusTypography.current
+    val spacing = LocalNexusSpacing.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(spacing.md)
+            .clip(RoundedCornerShape(20.dp))
+            .background(c.surface)
+            .clickable(onClick = onClick)
+            .padding(spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(c.lime),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Cloud,
+                contentDescription = null,
+                tint = c.ink,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.width(spacing.sm))
+        Column(modifier = Modifier.weight(1f)) {
+            BasicText(
+                text = provider?.name ?: stringResource(R.string.drawer_active_provider_label),
+                style = type.body.copy(color = c.text),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            BasicText(
+                text = model ?: "—",
+                style = type.caption.copy(color = c.textMuted),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Icon(
+            imageVector = Icons.Filled.ExpandMore,
+            contentDescription = null,
+            tint = c.textMuted,
+            modifier = Modifier.size(18.dp)
         )
     }
 }
